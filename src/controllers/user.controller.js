@@ -15,8 +15,8 @@ const registerUser=asyncHandler(async(req,res)=>{
     // check for user creation
     // return response  
 
-    const {fullname,email,username ,password}=req.body
-    console.log("email:",email);
+    const {fullname,email,username ,password}=req.body||{}
+
 
     if (
         [fullname,email,username,password].some((field)=>field?.trim()==="")
@@ -32,27 +32,31 @@ const registerUser=asyncHandler(async(req,res)=>{
         throw new ApiError(409,"User with email or username exist")
         
     }
+    
 
 
-    const avatarLocalPath=req.files?.avatar[0]?.path;
-    const coverImageLocalPath=req.files?.coverImage[0]?.path;
+    const avatarLocalPath=req.files?.avatar?.[0]?.path;
+    const coverImageLocalPath=req.files?.coverImage?.[0]?.path;
     if (!avatarLocalPath) {
         throw new ApiError(400,"Avatar field is reqired")    
     }
 
 
     const avatar=await uploadOnCloudinary(avatarLocalPath)
-    const coverImage=await uploadOnCloudinary(coverImageLocalPath)
+    const coverImage=coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) :null;
 
-
-    if (!avatarLocalPath) {
-        throw new ApiError(400,"Avatar field is reqired")    
-    }
+    
+    if (!avatar) {
+        return res.status(400).json({
+            success: false,
+            message: "Avatar could not be uploaded to Cloudinary. Check your console."
+        });
+    } 
 
     const user = await User.create({
         fullname,
-        avatar: avatar.url,
-        coverImage:coverImage.url || "",
+        avatar: avatar?avatar.url:"",
+        coverImage:coverImage?.url || "",
         email,
         password,
         username: username.toLowerCase()
